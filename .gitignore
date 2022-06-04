@@ -1,4 +1,5 @@
 .env
+.env.yaml
 .venv
 token.json
 __pycache__

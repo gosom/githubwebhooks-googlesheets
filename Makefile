@@ -19,3 +19,8 @@ local:  ## local starts the local development server
 expose: ## expose exposes port 8080 via ngrok
 	ngrok http 8000
 
+.PHONY: deploy
+deploy: ## deploy deploys the function to google cloud
+	gcloud functions deploy github_pr_event --runtime python39 --trigger-http --allow-unauthenticated --env-vars-file .env.yaml
+
+

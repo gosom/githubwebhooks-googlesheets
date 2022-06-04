@@ -67,5 +67,22 @@ Tip: You can replay the webhooks, useful for testing/development (from github)
 
 ### Deployement to GCP Cloud functions
 
-**TODO**
+Make sure that you have enable Cloud Functions in your GCP. 
+
+Additionally create an .env.yaml file with your settings.
+
+
+```
+make deploy
+```
+
+Once you deploy make sure that the cloud function is using the
+`Runtime Service Account` that you gave access to Google Sheets.
+
+Check that in the settings of your Function: 
+
+Also make sure that you add the `url` of the cloud function in your
+github webhook. You get this from the `httpsTrigger` section in the output
+of `make deploy` or you can find it via the google UI.
+
 
