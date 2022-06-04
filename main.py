@@ -8,7 +8,9 @@ from ipaddress import ip_address, ip_network
 
 import functions_framework
 
-import spreadsheet
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+
 
 # WebHook must have application/json content-type
 
@@ -21,8 +23,8 @@ def github_pr_event(request):
         validate(request)
         data = request.get_json()
         if is_review_approved(data):
-            cfg = spreadsheet.Config()
-            writer = spreadsheet.SpreadSheetRowWriter(cfg)
+            cfg = Config()
+            writer = SpreadSheetRowWriter(cfg)
             review_data = ReviewData(data)
             resp = writer.write(review_data.values)
             return resp, 200
@@ -32,19 +34,70 @@ def github_pr_event(request):
         logging.error(str(e))
         return {"error": str(e)}, 500
 
+class Config:
+
+    def __init__(self):
+        self.service_account_file = os.getenv("SERVICE_ACCOUNT_FILE", None)
+        self.spreadsheet_id = os.environ["SPREADSHEET_ID"]
+        self.range_ = os.environ["RANGE_"]
+
+class SpreadSheetRowWriter:
+
+    scopes = ['https://www.googleapis.com/auth/spreadsheets']
+
+    def __init__(self, config):
+        self.config = config
+        if self.config.service_account_file:
+            credentials = service_account.Credentials.from_service_account_file(
+                    self.config.service_account_file
+                    )
+        else:
+            credentials = None
+        self.service = build("sheets", "v4", credentials=credentials)
+        self.value_input_option = 'USER_ENTERED'
+        self.insert_data_option = 'INSERT_ROWS'
+
+    def write(self, values):
+        value_range_body = {
+                "range": self.config.range_,
+                "majorDimension": "ROWS",
+                "values": [values],
+        }
+        request = self.service.spreadsheets().values().append(
+            spreadsheetId=self.config.spreadsheet_id,
+            range=self.config.range_,
+            valueInputOption=self.value_input_option,
+            insertDataOption=self.insert_data_option,
+            body=value_range_body)
+        response = request.execute()
+        return response
+
 
 class ReviewData:
 
     def __init__(self, data):
-        self.approved_at = data["review"]["submitted_at"]
-        self.author = data["pull_request"]["user"]["login"]
-        self.reviewer = data["review"]["user"]["login"]
-        self.title = data["pull_request"]["title"]
-        self.repo = data["repository"]["name"]
+        self.comma_sep_fields = os.environ["EXTRACT"]
+        self.concat_char = os.environ.get("CONCAT_CHAR", "/")
+        self.data = data
 
     @property
     def values(self):
-        return [self.approved_at, self.repo+"/"+self.title, self.author, self.reviewer]
+        fields = [f.split("+") for f in self.comma_sep_fields.split(",")]
+        values = []
+        for l in fields:
+            val = []
+            for el in l:
+                val.append(str(self.__extract(el)))
+            values.append(self.concat_char.join(val))
+        return values
+
+    def __extract(self, field):
+        current = self.data
+        keys = list(reversed(field.split("->")))
+        while keys:
+            key = keys.pop()
+            current = current[key]
+        return current
 
 
 class InvalidIPError(Exception):
