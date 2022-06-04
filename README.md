@@ -35,10 +35,15 @@ With the above config it will do:
 1 A      B      C         D
 2 Date   Title  Author    Reviewer 
 ```
+
 It will create a new row (3) with data in
+
 A3: `review->submitted_at`
+
 B3: `repository->name/pull_request->title`
+
 C3: `pull_request->user->login`
+
 C4: `review->user->login`
 
 So,
@@ -65,7 +70,7 @@ Make sure the webhook's content-type is `application/json` (on github)
 Tip: You can replay the webhooks, useful for testing/development (from github)
 
 
-### Deployement to GCP Cloud functions
+### Deployment to GCP Cloud functions
 
 Make sure that you have enable Cloud Functions in your GCP. 
 
